@@ -1,0 +1,20 @@
+{
+	"known_ESP": [
+        {
+            "espID": "",
+			"name": "Koffer1"
+        },
+        {
+			"espID": "1458280",
+			"name": "Koffer2"
+		},
+		{
+			"espID": "",
+			"name": "Koffer3"
+		},
+        {
+            "espID": "",
+			"name": "Koffer4"
+        }
+	]
+}

@@ -1,0 +1,36 @@
+{
+	"schema": 2,
+	"known_networks": [
+        {
+            "ssid": "Emi-Koffer",
+			"password": "EmiStar1",
+			"enables_webrepl": false
+        },
+        {
+			"ssid": "HUAWEI-40EE",
+			"password": "55275248",
+			"enables_webrepl": false
+		},
+		{
+			"ssid": "iPhone von kainb",
+			"password": "benni001",
+			"enables_webrepl": false
+		},
+        {
+            "ssid": "HUAWEI-D76B",
+			"password": "68743913",
+			"enables_webrepl": false
+        }
+
+	],
+	"access_point": {
+		"config": {
+			"essid": "Emi-Koffer",
+			"channel": 11,
+			"hidden": false,
+			"password": "EmiStar1"
+		},
+		"enables_webrepl": false,
+		"start_policy": "fallback"
+	}
+}
