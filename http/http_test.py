@@ -1,6 +1,7 @@
 import network
 from steuerung.gpfile import Steuerung
-from steuerung.methoden import steuermethoden,TableErstellen
+from steuerung.methoden import TableErstellen,LedLIcht
+from http.newWifi import NewWifi
 aufrufe = 0                                         #anzahl aufrufe der Webseite
 
 def qs_parse(qs):
@@ -43,37 +44,55 @@ def get_GET(req):
                     response ="Dict ERROR"
                 finally:
                     return datenTyp, response
-            
+
+            if "/newWIFI" in getcall:
+                response = NewWifi.createHTML()
+                return datenTyp, response
+
             else:           #elif "/" == getcall or "/?" in getcall:
                 #steuermethoden.read_DHT_data()
                 with open('/HTML_CSS/anzeige.html', 'r') as f:
                     for line in f.readlines():
                         response += line                
-                table = TableErstellen.get_table()
+                table = TableErstellen.get_table(Steuerung.datenDict)
         
         if "?" in getcall:                          #frägt ob eine request mit argumenten ist bstp /data?ID=192.168.0.100&NAME=Koffer
             path = getcall.split("?")[0]
             args = qs_parse(getcall.split("?")[1])  #splitted args in Dictionary
             #print (args)
-            command = TableErstellen.query_verarbeiten(args)
-
+            if path == "/post":
+                command = TableErstellen.save_new_Wifi(**args)
+            elif path == "/licht":
+                command = LedLIcht.lichtint(**args)
+                Steuerung.led.duty(command)
+            else:
+                command = TableErstellen.query_verarbeiten(**args)
+        
         else:
             command=""
         global aufrufe
         aufrufe += 1
         response = response.format(table= table,command= command,aufrufe = str(aufrufe)) 
-        response=""
+
         return datenTyp,response
     except Exception as e:
-        print("Ferhler in http.test.py: " ,e)
+        print("Fehler in http.test.py: " ,e)
         raise e
 
-def get_POST(req):
+def get_POST(req,cl_file):
     try:
         print("Request",req)
         if "Content-Length: " in req:
             byteAnzahl = int(req[16:-2])
             print(byteAnzahl)
-            return byteAnzahl
-    except:
-        return 0
+        print("Post request")
+        if byteAnzahl > 0:
+            getData = cl_file.read(byteAnzahl)                  # datenlänge ist die anzahl an bytes die im body von post enthalten sind
+            print(getData)                      #printed den boy von Post
+            response= "Daten erfolgreich gelesen"
+        else:
+            response = "Keine Daten empfangen, Post Body leer"
+        return response
+    except Exception as e:
+        print("Fehler in get_post methode: ", e)
+        raise e

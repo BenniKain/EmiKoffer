@@ -1,1 +1,12 @@
-body{font-size:10pt;font-family:Arial,Helvetica,sans-serif;color:#000;line-height:16pt;padding-left:5pt;padding-right:5pt;padding-top:5pt;background-color:#0d0}h1{font:14pt Verdana,Geneva,Arial,Helvetica,sans-serif;font-weight:700;line-height:20pt;text-align:center}p.subheader{font-weight:700;color:#593d87}p{color:#7d7db6}table{border:2;border-spacing:10;column-rule-style:dotted;width:100%;background-color:#0e0;align-content:center;text-align:left}table.row{align-content:center;width:100%;border-collapse:collapse}img{padding:3pt;float:right}a{text-decoration:none}a:link,a:visited{color:#8094d6}a:active,a:hover{color:#f93}div.footer{font-size:9pt;font-style:italic;line-height:12pt;text-align:center;padding-top:30pt}button{width:100%;background-color:#3b8dff}
+body{font-size:10pt;font-family:Arial,Helvetica,sans-serif;color:#000;line-height:16pt;padding-left:5pt;padding-right:5pt;padding-top:5pt;background-color:#0d0}
+h1{font:14pt Verdana,Geneva,Arial,Helvetica,sans-serif;font-weight:700;line-height:20pt;text-align:center}
+
+table{border:2;border-spacing:10;column-rule-style:dotted;width:100%;background-color:#0e0;align-content:center;text-align:left}
+table.row{align-content:center;width:100%;border-collapse:collapse}
+table{background-color: #0d0;}
+img{padding:3pt;float:right}
+a{text-decoration:none}
+a:link,a:visited{color:#8094d6}
+a:active,a:hover{color:#f93}
+div.footer{color: #7d7db6 ;font-size: 8pt;font-style:italic;line-height:10pt;text-align:center;}
+button{width:100%;background-color:#7d7db6}

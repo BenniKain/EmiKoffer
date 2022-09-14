@@ -1,27 +1,39 @@
+from time import sleep
 class steuersetup():
     @classmethod
     def get_ESPName(cls,esp_config_file,espID):
         try:
             import json
-            print("open json")
+            print("überprüfe ob ESP bereits in ESPconfig.json")
             with open(esp_config_file, "r") as f:
                 config = json.loads(f.read())
                 for esps in config['known_ESP']:
-                    #print(esps)
                     if esps["espID"] == espID:
                         name = esps["name"]
-                        #print(name)
-                        #cls.datenDict.update({"name":name})
                         return name
         except:
             print("ESP ID not found")
-
+        name = cls.saveNewESP(esp_config_file,config,espID)
+        return name
     @classmethod
     def get_espID(cls):
         import esp
         espID = str(esp.flash_id()) 
         return espID
 
+    @classmethod
+    def saveNewESP(cls,esp_config_file,config,espID):
+        import json
+        print(" Speichere neuen ESP in JSON File")
+        nummer = len(config["known_ESP"])+1
+        config["known_ESP"].append(		{
+			"espID": espID,
+			"name": "Koffer{}".format(str(nummer)),
+			"mode": "Koffer"})
+        #speichern der geänderten var als Json datei
+        with open(esp_config_file,"w")as f:
+            json.dump(config,f)
+        return str(nummer)
     @classmethod
     def set_ds1306Time(cls):
         try:
@@ -49,11 +61,21 @@ class steuersetup():
         print('SD Card contains:{}'.format(os.listdir()))
         """
 
+class LedLIcht:
+    def lichtint (self,**kwargs):
+        licht_in_prozent = int(kwargs["lichtintensity"]*(1023/100))  #1023/100 ist 8 bit zu prozent
+        print("Lichtintensität auf {} geändert".format(licht_in_prozent))
+        return  licht_in_prozent
+
 class oledanzeige():
     @classmethod
     def showWaage(cls,oled,hx711):
-        oled.text('Gewicht g: :', 0, 0, 1)
-        oled.text(str(hx711.read()),128-len(str(hx711.read()))*10, 0, 1)    #len is 4 trotz . wegen float daher 10 sign lang
+        oled.text('Waagen anzeige:', 0, 0, 1)
+        oled.text('Gewicht g: :', 0, 14, 1)
+        oled.text(str(hx711.read()),128-len(str(hx711.read()))*10, 14, 1)    #len is 4 trotz . wegen float daher 10 sign lang
+        oled.text("Tare auf ", 0, 28, 1)
+        oled.text(str(hx711.read()),128-len(str(round(hx711.offset,1)))*10, 28, 1) 
+        print(hx711.read())
 
     @classmethod
     def showValues(cls,oled,datenDict):
@@ -69,7 +91,7 @@ class oledanzeige():
     @classmethod
     def showIP(cls,oled,datenDict):
         oled.text('Name:', 0, 0, 1)
-        oled.text(datenDict["name"], 128-len(datenDict["ip"])*9, 0, 1)  
+        oled.text(datenDict["name"], 128-len(datenDict["name"])*9, 0, 1)  
         oled.text('IP:', 0, 14, 1)
         oled.text(datenDict["ip"], 128-len(datenDict["ip"])*9, 14, 1) 
 
@@ -79,21 +101,22 @@ class steuermethoden():
         cls.kofferDict.update({dataDict["espID"]:dataDict}) #dict in dict quasi
 
     @classmethod
-    def pumpeANAUS(cls,Pin):
+    def pumpeANAUS(cls,Pin,pumpenrelay):
+        print("value of the InterruptPin: ",Pin.value())
         if Pin.value() == 0:
-            print("Pumpe Aus")
-            Pin.off()
+            print("Pumpe An")
+            pumpenrelay.on()
             pumpenstatus = False
         elif Pin.value() == 1:
-            print("Pumpe An")
-            Pin.on()
+            print("Pumpe Aus")
+            pumpenrelay.off()
             pumpenstatus = True
         return  pumpenstatus
 
     @classmethod
     def nextANzeige(cls,screenfeld,screenfelder):
-        if screenfeld == screenfelder:
-            screenfeld = 0
+        if screenfeld == len(screenfelder):
+            screenfeld = 1
         else:
             screenfeld += 1 
         sleep(0.1)
@@ -106,24 +129,72 @@ class steuermethoden():
             dht11.measure()
             temp = str(dht11.temperature())
             hum = str(dht11.humidity())
-        except:
+        except Exception as e:
             temp= "--"
             hum = "--"
+            print(e)
         finally:
             return temp , hum
 
     @classmethod
-    def read_BMP_Data(cls):
+    def read_BMP_Data(cls,bmp180):
         try:
-            tBMP    =   str(cls.bmp180.temperature)
-            press   =   str(cls.bmp180.pressure /100)   #in Pa, mit /100 in hPa
-            alt     =   str(cls.bmp180.altitude)
-        except:
-            tBMp,press,alt = "--","--","--"
+            tBMP    =   str(round(bmp180.temperature,1))
+            press   =   str(int(bmp180.pressure /100))   #in Pa, mit /100 in hPa
+            alt     =   str(round(bmp180.altitude /100,0))
+        except Exception as e:
+            tBMP,press,alt = "--","--","--"
+            print(e)
         finally:
             return tBMP,press,alt
 
 class TableErstellen:
+    @classmethod
+    def get_table(cls,datenDict):
+        func = "Nix"
+        tabledict = {}
+        tabledict.update({"Parameter":("IP Adresse","Temperatur","Druck","Feuchtigkeit","Pumpe an","Pumpe aus"  )})
+        #,"LichtIntensität","Licht ändern")})
+        tabledict.update({datenDict["name"]:[datenDict["ip"],datenDict["temp"],datenDict["press"],datenDict["hum"],
+        "<a href=\"?Koffer={koffer}&ip={ip}&function={func}AN\"><button>einschalten</button></a>".format(koffer=datenDict["name"],ip=datenDict["ip"],func=func),
+        "<a href=\"?Koffer={koffer}&ip={ip}&function={func}AUS\"><button>ausschalten</button></a>".format(koffer=datenDict["name"],ip=datenDict["ip"],func=func) ]})
+        #,'<INPUT TYPE="password" NAME="Lichtintensity" SIZE="25">',
+        #'<INPUT TYPE="SUBMIT" VALUE="Submit" NAME="B1">' ]})
+        #anzeige von input feldern fuktioniert über esp nicht, warum auch immer
+
+        table = "<table><tr>"
+        keys =list(tabledict.keys())
+        for key in keys:
+            table += "<th> {} </th>".format(key) 
+        table += "</tr>"
+
+        ipS,tS,press,humS,puANS,puAUSS =[],[] ,[],[],[],[]
+        #lichtlist,lichtbuttonlist = [],[]
+        for key in keys:
+            
+            ip,T,p,hum,pupmeAN,pumpeAUS = tabledict[key]
+            #lichtlist,lichtbuttonlist = tabledict[key]
+            cls.ip = ip
+            ipS.append("<td> {}</td>".format(ip))
+            tS.append("<td>{}</td>".format(T))
+            press.append("<td>{}</td>".format(p))
+            humS.append("<td>{}</td>".format(hum))
+            puANS.append("<td>{}</td>".format(pupmeAN))
+            puAUSS.append("<td>{}</td>".format(pumpeAUS))
+            #lichtlist.append("<td>{}</td>".format(licht))
+            #lichtbuttonlist.append("<td>{}</td>".format(button))
+        
+        table += cls.addRow(ipS)
+        table += cls.addRow(tS)
+        table += cls.addRow(press)
+        table += cls.addRow(humS)
+        table += cls.addRow(puANS)
+        table += cls.addRow(puAUSS)
+        #table += cls.addRow(lichtlist)
+        #table += cls.addRow(lichtbuttonlist)
+        table += "</table>"    
+        return table
+
     @classmethod
     def addRow(cls,liste):
         cls.tabellereihe = "<tr>"
@@ -133,38 +204,39 @@ class TableErstellen:
         return cls.tabellereihe
 
     @classmethod
-    def get_table(cls):
-        cls.DatenDict={}
-        cls.DatenDict.update({"Parameter":("IP Adresse","Temperatur","Feuchtigkeit","Pumpe an","Pumpe aus")})
-        cls.DatenDict.update({"{koffer}".format(koffer = cls.datenDict["koffer"]):["{ip}".format(ip=cls.datenDict["ip"]),cls.datenDict["temp"],cls.datenDict["hum"],
-        "<a href=\"?Koffer={koffer}&ip={ip}&function={func}AN\"><button>einschalten</button></a>".format(koffer=cls.datenDict["koffer"],ip=cls.datenDict["ip"],func=cls.func),
-        "<a href=\"?Koffer={koffer}&ip={ip}&function={func}AUS\"><button>ausschalten</button></a>".format(koffer=cls.datenDict["koffer"],ip=cls.datenDict["ip"],func=cls.func)]})
-        #DatenDict.update({"Koffer2":("192.196.11.101",24,20,"<a href=\"?pin=Pumpe1ON\"><button>einschalten</button></a>","<a href=\"?pin=Pumpe1OFF\"><button>ausschalten</button></a>")})
-        table = "<table><tr>"
-        keys =list(cls.DatenDict.keys())
-        for key in keys:
-            table += "<th> {} </th>".format(key) 
-        table += "</tr>"
+    def save_new_Wifi (cls,**args): 
+        if cls.connect_Wifi(args["ssid"],args["password"]): #wird nicht wahr trotz handy wlan testeingabe
+            import json
+            config_file = "/http/networks.json"
+            with open(config_file,"r") as f:
+                config = json.loads(f.read())
+            
+            config['known_networks'].append({
+			"ssid": args["ssid"],
+			"password": args["password"],
+			"enables_webrepl": False})
 
-        ipS,tS,humS,puANS,puAUSS =[],[] ,[],[],[]
-        for key in keys:
-            cls.ip,cls.T,cls.hum,cls.pupmeAN,cls.pumpeAUS = cls.DatenDict[key]
-            ipS.append("<td> {}</td>".format(cls.ip))
-            tS.append("<td>{}</td>".format(cls.T))
-            humS.append("<td>{}</td>".format(cls.hum))
-            puANS.append("<td>{}</td>".format(cls.pupmeAN))
-            puAUSS.append("<td>{}</td>".format(cls.pumpeAUS))
-        
-        table += cls.addRow(ipS)
-        table += cls.addRow(tS)
-        table += cls.addRow(humS)
-        table += cls.addRow(puANS)
-        table += cls.addRow(puAUSS)
-        table += "</table>"    
-        return table
+            with open(config_file,"w")as f:             #speichern der geänderten var als Json datei
+                json.dump(config,f)
+            print("Netzwerk aufgenommen: ",args["ssid"])
+            return "W-Lan verbunden und gespeichert"
+        return "Fehler bei verbinden des W-Lans!"
+   
+    @classmethod
+    def connect_Wifi(cls, ssid, password) -> bool:
+        try:
+            import network
+            wlan = network.WLAN(network.STA_IF)
+            wlan.connect(ssid, password)
+            for check in range(0, 10): 
+                if wlan.isconnected():
+                    return True
+                sleep(0.5)
+        except:
+            return False
 
     @classmethod
-    def query_verarbeiten (cls,parDict):
+    def query_verarbeiten (cls,**parDict):
         if parDict["ip"] == cls.ip:
             print("eigener esp")
             commando = cls.functionCall(parDict["function"])
